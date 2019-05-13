@@ -1,0 +1,69 @@
+{*
+Example for BarGraph_2 Click
+
+    Date          : mar 2018.
+    Author        : MikroE Team
+
+Test configuration dsPIC :
+    
+    MCU                : P33FJ256GP710A
+    Dev. Board         : EasyPIC Fusion v7
+    dsPIC Compiler ver : v7.0.1.0
+
+---
+Description :
+
+The application is composed of three sections :
+
+- System Initialization - GPIO and SPI module initialization    
+- Application Initialization - SPI driver initialization
+- Application Task - Turning all 10 LED ON sequentially on the bargraph 
+
+*}
+program Click_BarGraph_2_DSPIC;
+
+uses Click_BarGraph_2_types, Click_BarGraph_2_config;
+
+var
+    i : uint8_t; 
+    
+procedure systemInit(); 
+begin
+
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_CS_PIN, _GPIO_OUTPUT); 
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_RST_PIN, _GPIO_OUTPUT); 
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_PWM_PIN, _GPIO_OUTPUT); 
+    mikrobus_spiInit(_MIKROBUS1, @_BARGRAPH2_SPI_CFG[0]); 
+    Delay_ms(100); 
+
+end;
+
+procedure applicationInit(); 
+begin
+
+    bargraph2_spiDriverInit(T_BARGRAPH2_P(@_MIKROBUS1_GPIO), T_BARGRAPH2_P(@_MIKROBUS1_SPI)); 
+
+end;
+
+procedure applicationTask(); 
+begin
+
+    for i := 0 to 11-1 do 
+    begin
+        bargraph2_set(i); 
+        Delay_ms(100); 
+    end;
+
+end;
+
+begin
+    i := 0;
+
+    systemInit(); 
+    applicationInit(); 
+    while (1) do 
+    begin 
+        applicationTask(); 
+    end;
+
+end.

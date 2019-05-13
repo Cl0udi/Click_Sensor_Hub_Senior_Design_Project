@@ -1,0 +1,83 @@
+'
+'Example for Accel5 Click
+'
+'    Date          : maj 2018.
+'    Author        : Katarina Perendic
+'
+'Test configuration CEC :
+'    
+'    MCU              : CEC1702
+'    Dev. Board       : Clicker 2 for CEC1702
+'    ARM Compiler ver : v6.0.0.0
+'
+'---
+'
+'Description :
+'
+'The application is composed of three sections :
+'
+'- System Initialization - Initializes I2C module
+'- Application Initialization - Initializes Driver init and settings accelerometer data range and mode
+'- Application Task - (code snippet) - Reads the accel X / Y / Z axis data, every 500 ms.
+'
+'
+program Click_Accel5_CEC
+
+include Click_Accel5_types
+include Click_Accel5_config
+
+dim
+    X_axisData as int16_t 
+    Y_axisData as int16_t 
+    Z_axisData as int16_t 
+    demoText as char[50] 
+    
+sub procedure systemInit() 
+
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_INT_PIN, _GPIO_INPUT) 
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_PWM_PIN, _GPIO_INPUT) 
+    mikrobus_i2cInit(_MIKROBUS1, @_ACCEL5_I2C_CFG[0]) 
+    mikrobus_logInit(_MIKROBUS2, 9600) 
+    mikrobus_logWrite(" --- System Init --- ", _LOG_LINE) 
+    Delay_ms(100) 
+
+end sub
+
+sub procedure applicationInit() 
+
+    accel5_i2cDriverInit(T_ACCEL5_P(@_MIKROBUS1_GPIO), T_ACCEL5_P(@_MIKROBUS1_I2C), 0x15) 
+    accel5_softReset() 
+    accel5_init(_ACCEL5_CFG_0_NORMAL_MODE, _ACCEL5_CFG_1_ACC_RANGE_4g) 
+    Delay_100ms() 
+
+end sub
+
+sub procedure applicationTask() 
+
+    X_axisData = accel5_getAxis(_ACCEL5_X_AXIS) 
+    mikrobus_logWrite(" X axis : ", _LOG_TEXT) 
+    IntToStr(X_axisData, demoText) 
+    mikrobus_logWrite(demoText, _LOG_LINE) 
+    Y_axisData = accel5_getAxis(_ACCEL5_Y_AXIS) 
+    mikrobus_logWrite(" Y axis : ", _LOG_TEXT) 
+    IntToStr(Y_axisData, demoText) 
+    mikrobus_logWrite(demoText, _LOG_LINE) 
+    Z_axisData = accel5_getAxis(_ACCEL5_Z_AXIS) 
+    mikrobus_logWrite(" Z axis : ", _LOG_TEXT) 
+    IntToStr(Z_axisData, demoText) 
+    mikrobus_logWrite(demoText, _LOG_LINE) 
+    mikrobus_logWrite("  ", _LOG_LINE) 
+    Delay_ms(500) 
+
+end sub
+
+main :
+    demoText[0] = 0
+
+    systemInit() 
+    applicationInit() 
+    while (1) 
+        applicationTask() 
+    wend
+
+end.

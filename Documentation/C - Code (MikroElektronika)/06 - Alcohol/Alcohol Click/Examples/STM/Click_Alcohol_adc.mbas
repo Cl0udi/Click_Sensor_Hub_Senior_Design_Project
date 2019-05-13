@@ -1,0 +1,26 @@
+module Click_Alcohol_adc
+
+include Click_Alcohol_types
+
+sub procedure alcohol_adcInit() 
+sub function  alcohol_readADC() as uint32_t 
+
+implements
+
+sub procedure alcohol_adcInit() 
+
+    ADC1_Init() 
+    ADC_Set_Input_Channel(_ADC_CHANNEL_3) 
+
+end sub
+
+sub function  alcohol_readADC() as uint32_t 
+dim
+    readADC as uint32_t
+
+    readADC = ADC1_Read(_ADC_CHANNEL_3) 
+    result = readADC 
+
+end sub
+
+end.

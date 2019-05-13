@@ -1,0 +1,278 @@
+{*
+ * Project name:
+     microSD click FAT16 (Demonstration of usage of Mmc_Fat16 library)
+ * Copyright:
+     (c) Mikroelektronika, 2014.
+ * Revision History:
+     20140704:
+       - initial release (FJ);
+ * Description:
+     This project consists of several blocks that demonstrate various aspects of
+     usage of the Mmc_Fat16 library. These are:
+     - Creation of new file and writing down to it;
+     - Opening existing file and re-writing it (writing from start-of-file);
+     - Opening existing file and appending data to it (writing from end-of-file);
+     - Opening a file and reading data from it (sending it to USART terminal);
+     - Creating and modifying several files at once;
+     - Reading file contents;
+     - Deleting file(s);
+     - Creating the swap file (see Help for details);
+ * Test configuration:
+     MCU:             P32MX795F512L
+                      http://ww1.microchip.com/downloads/en/DeviceDoc/61156F.pdf
+     Dev.Board:       EasyPIC Fusion v7
+                      http://www.mikroe.com/easypic-fusion/
+     Oscillator:      XT-PLL, 80.000MHz
+     Ext. Modules:    microSD click Board  - ac:microSDclick
+                      http://www.mikroe.com/eng/products/view/776/microsd-click/
+     SW:              mikroPascal PRO for PIC32
+                      http://www.mikroe.com/mikroc/pic32/
+ * NOTES:
+     - Make sure that microSD card is properly formatted (to FAT16 or just FAT)
+       before testing it with this example.
+     - Place microSD click board at the mikroBUS socket 1 on the EasyPIC Fusion v7 board.
+     - Put PORTB switches in the middle (neutral) position.
+     - Turn on SPI switches at SW13 and microSD card switches at SW14.
+     - Turn on Rx and Tx switches (SW12.1 and SW12.1).
+ *}
+
+program microSD_click_FAT16;
+
+// microSD click module connections
+var Mmc_Chip_Select : sbit at LATC2_bit;
+    Mmc_Chip_Select_Direction : sbit at TRISC2_bit;
+    Mmc_Card_Detect : sbit at RB8_bit;
+    Mmc_Card_Detect_Direction : sbit at TRISB8_bit;
+// eof microSD click module connections
+
+const LINE_LEN = 43;
+
+var
+  err_txt : string[20];
+  file_contents : string[LINE_LEN];
+
+  filename : string[14]; // File names
+
+  character : byte;
+  loop, loop2 : byte;
+  size : longint;
+
+
+// UART write text and new line (carriage return + line feed)
+procedure UART2_Write_Line( var uart_text : string );
+  begin
+    UART2_Write_Text(uart_text);
+    UART2_Write(13);
+    UART2_Write(10);
+  end;
+
+// Creates new file and writes some data to it
+procedure M_Create_New_File();
+begin
+  filename[7] := 'A';               // Set filename for single-file tests
+  Mmc_Fat_Set_File_Date(2010, 4, 19, 9, 0, 0); // Set file date & time info
+  Mmc_Fat_Assign(filename, 0xA0);   // Will not find file and then create file
+  Mmc_Fat_Rewrite;                  // To clear file and start with new data
+  for loop:=1 to 99 do              //  We want 5 files on the MMC card
+    begin
+      UART2_Write('.');
+      file_contents[0] := loop div 10 + 48;
+      file_contents[1] := loop mod 10 + 48;
+      Mmc_Fat_Write(file_contents, LINE_LEN-1);   // write data to the assigned file
+    end;
+end;
+
+// Creates many new files and writes data to them
+procedure M_Create_Multiple_Files();
+begin
+  for loop2 := 'B' to 'Z' do
+    begin
+      UART2_Write(loop2);                 // signal the progress
+      filename[7] := loop2;               // set filename
+      Mmc_Fat_Set_File_Date(2010, 4, 19, 9, 0, 0); // Set file date & time info
+      Mmc_Fat_Assign(filename, 0xA0);     // find existing file or create a new one
+      Mmc_Fat_Rewrite;                    // To clear file and start with new data
+      for loop := 1 to 44 do
+        begin
+          file_contents[0] := byte(loop div 10 + 48);
+          file_contents[1] := byte(loop mod 10 + 48);
+          Mmc_Fat_Write(file_contents, LINE_LEN-1); // write data to the assigned file
+        end;
+    end;
+end;
+
+// Opens an existing file and rewrites it
+procedure M_Open_File_Rewrite();
+ begin
+  filename[7] := 'C';               // Set filename for single-file tests
+  Mmc_Fat_Assign(filename, 0);
+  Mmc_Fat_Rewrite;
+  for loop := 1 to 55 do
+   begin
+    file_contents[0] := byte(loop div 10 + 48);
+    file_contents[1] := byte(loop mod 10 + 48);
+    Mmc_Fat_Write(file_contents, 42); // write data to the assigned file
+   end;
+ end;
+
+// Opens an existing file and appends data to it and alters the date/time stamp)
+procedure M_Open_File_Append();
+ begin
+   filename[7] := 'B';
+   Mmc_Fat_Assign(filename, 0);
+   Mmc_Fat_Set_File_Date(2010, 9, 20, 10, 21, 1);
+   Mmc_Fat_Append();                                  // Prepare file for append
+   file_contents := ' for mikroElektronika 2010';     // Prepare file for append
+   file_contents[26] := 13;                           // CR
+   file_contents[27] := 10;                           // LF
+   Mmc_Fat_Write(file_contents, 27);                  // Write data to assigned file
+ end;
+
+// Opens an existing file, reads data from it and puts it to USART
+procedure M_Open_File_Read();
+begin
+  filename[7] := 'B';
+  Mmc_Fat_Assign(filename, 0);
+  Mmc_Fat_Reset(size);             // To read file, procedure returns size of file
+  while size > 0 do
+    begin
+      Mmc_Fat_Read(character);
+      UART2_Write(character);      // Write data to UART
+      Dec(size);
+    end;
+end;
+
+// Deletes a file. If file doesn't exist, it will first be created
+// and then deleted.
+procedure M_Delete_File();
+begin
+  filename[7] := 'F';
+  Mmc_Fat_Assign(filename, 0);
+  Mmc_Fat_Delete;
+end;
+
+// Tests whether file exists, and if so sends its creation date
+// and file size via USART
+procedure M_Test_File_Exist;
+var
+  fsize: longint;
+  year: word;
+  month, day, hour, minute: byte;
+  outstr: array[12] of char;
+begin
+  filename[7] := 'B';
+  if Mmc_Fat_Assign(filename, 0) <> 0 then begin
+    // file has been found - get its date
+    Mmc_Fat_Get_File_Date(year,month,day,hour,minute);
+    UART2_Write_Text(' created: ');
+    WordToStr(year, outstr);
+    UART2_Write_Text(outstr);
+    ByteToStr(month, outstr);
+    UART2_Write_Text(outstr);
+    WordToStr(day, outstr);
+    UART2_Write_Text(outstr);
+    WordToStr(hour, outstr);
+    UART2_Write_Text(outstr);
+    WordToStr(minute, outstr);
+    UART2_Write_Text(outstr);
+
+    // file has been found - get its modified date
+    Mmc_Fat_Get_File_Date_Modified(year, month, day, hour, minute);
+    UART2_Write_Text(' modified: ');
+    WordToStr(year, outstr);
+    UART2_Write_Text(outstr);
+    ByteToStr(month, outstr);
+    UART2_Write_Text(outstr);
+    WordToStr(day, outstr);
+    UART2_Write_Text(outstr);
+    WordToStr(hour, outstr);
+    UART2_Write_Text(outstr);
+    WordToStr(minute, outstr);
+    UART2_Write_Text(outstr);
+
+    // get file size
+    fsize := Mmc_Fat_Get_File_Size;
+    LongIntToStr(fsize, outstr);
+    UART2_Write_Line(outstr);
+  end
+  else
+    begin
+      // file was not found - signal it
+      UART2_Write(0x55);
+      Delay_ms(1000);
+      UART2_Write(0x55);
+    end;
+end;
+
+// Tries to create a swap file, whose size will be at least 100
+// sectors (see Help for details)
+procedure M_Create_Swap_File();
+  var i : word;
+
+begin
+  size := Mmc_Fat_Get_Swap_File(5000, 'mikroE.txt', 0x20);   // see help on this sub function for details
+
+  if (size <> 0) then
+    begin
+      for i:=0 to 511 do
+        f16_sector.fSect[i] := i;
+      LongIntToStr(size, err_txt);
+      UART2_Write_Line(err_txt);
+      for i:=0 to 4999 do
+        begin
+          Mmc_Write_Sector(size, f16_sector.fSect);
+          Inc(size);
+          UART2_Write('.')
+        end;
+  end
+end;
+
+begin
+  err_txt := 'FAT16 not found';
+  file_contents := 'XX MMC/SD FAT16 library by Anton Rieckert#';
+  file_contents[41] := 10;         // newline
+  filename := 'MIKRO00x.TXT';
+
+  AD1PCFG := 0xFFFF;               // Configure AN pins as digital I/O
+  JTAGEN_bit := 0;                 // Disable JTAG
+
+  Mmc_Card_Detect_Direction := 1;  // Set card detection pin to be input
+
+  UART2_Init(19200);               // Initialize UART2 module
+  Delay_ms(10);
+  UART2_Write_Line('Insert microSD Card');
+
+  while(Mmc_Card_Detect) do        // Loop until card is detected
+    nop;
+
+  Delay_ms(500);
+
+  UART2_Write_Line('microSD Card inserted');  // microSD Card present report
+
+  // Initialize SPI3 module
+  SPI3_Init_Advanced(_SPI_MASTER, _SPI_8_BIT, 80, _SPI_SS_DISABLE, _SPI_DATA_SAMPLE_MIDDLE, _SPI_CLK_IDLE_HIGH, _SPI_ACTIVE_2_IDLE);
+
+  // Use FAT16 quick format instead of init routine if a formatting is needed
+  if Mmc_Fat_Init() = 0 then
+    begin
+      // Reinitialize SPI at higher speed
+      SPI3_Init_Advanced(_SPI_MASTER, _SPI_8_BIT, 40, _SPI_SS_DISABLE, _SPI_DATA_SAMPLE_MIDDLE, _SPI_CLK_IDLE_HIGH, _SPI_ACTIVE_2_IDLE);
+      // Signal start-of-test
+      // Test functions
+      M_Create_New_File();
+      M_Create_Multiple_Files();
+      M_Open_File_Rewrite();
+      M_Open_File_Append();
+      M_Open_File_Read();
+      M_Delete_File();
+      M_Test_File_Exist();
+      M_Create_Swap_File();
+      // Signal end-of-test
+      UART2_Write_Line('Test End.');
+    end
+  else
+    begin
+      UART2_Write_Line(err_txt); // Note: Mmc_Fat_Init tries to initialize a card more than once.
+                                 //       If card is not present, initialization may last longer (depending on clock speed)
+    end;
+end.

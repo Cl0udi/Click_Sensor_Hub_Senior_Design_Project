@@ -1,0 +1,13 @@
+<EasyAVR7>
+	<Attributes>
+		<Url>http://www.mikroe.com/easyavr/</Url>
+		<Image>EasyAVR v7.jpg</Image>
+		<File></File>
+	</Attributes>
+	<Events>
+		<OnLeftClick></OnLeftClick>
+		<OnRightClick></OnRightClick>
+		<OnDblClick>OpenUrl</OnDblClick>
+		<OnMouseOver>PreviewImage</OnMouseOver>
+	</Events>
+</EasyAVR7>

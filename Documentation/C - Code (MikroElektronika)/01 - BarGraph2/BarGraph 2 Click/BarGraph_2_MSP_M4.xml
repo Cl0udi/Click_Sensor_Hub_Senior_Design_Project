@@ -1,0 +1,19 @@
+<LIB_INFO>
+	<FILE_VERSION>1</FILE_VERSION>
+	<ALIAS>
+		<BarGraph_2_MSP_M4/>
+	</ALIAS>
+	<NAME>
+		<BarGraph_2_MSP_M4/>
+	</NAME>
+	<FILES>
+		<BarGraph_2_MSP_M4.emcl/>
+	</FILES>
+	<DEVICES>
+		<MSP432P401M/>
+		<MSP432P401R/>
+	</DEVICES>
+	<DEPENDENCY>
+		<SPI/>
+	</DEPENDENCY>
+</LIB_INFO>

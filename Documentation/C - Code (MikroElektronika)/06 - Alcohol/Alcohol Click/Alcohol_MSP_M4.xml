@@ -1,0 +1,19 @@
+<LIB_INFO>
+	<FILE_VERSION>1</FILE_VERSION>
+	<ALIAS>
+		<Alcohol_MSP_M4/>
+	</ALIAS>
+	<NAME>
+		<Alcohol_MSP_M4/>
+	</NAME>
+	<FILES>
+		<Alcohol_MSP_M4.emcl/>
+	</FILES>
+	<DEVICES>
+		<MSP432P401M/>
+		<MSP432P401R/>
+	</DEVICES>
+	<DEPENDENCY>
+		<ADC/>
+	</DEPENDENCY>
+</LIB_INFO>

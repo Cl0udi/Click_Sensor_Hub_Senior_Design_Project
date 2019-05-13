@@ -1,0 +1,366 @@
+{**************************************************************************************************
+* Company: (c) mikroElektronika
+* Revision History:
+*     20120521:
+*       - initial release (JK adn DO);
+* Description:
+*     This module consists of several blocks that demonstrate various aspects of
+*     usage of the Mmc library. These are:
+*     - Creation of new file and writing down to it;
+*     - Opening existing file and re-writing it (writing from start-of-file);
+*     - Opening existing file and appending data to it (writing from end-of-file);
+*     - Opening a file and reading data from it (sending it to USART terminal);
+*     - Creating and modifying several files at once;
+*     - Reading file contents;
+*     - Deleting file(s);
+*     - Creating the swap file (see Help for details);
+*
+* Test configuration:
+*       MCU:             STM32F107VC
+*                        http://www.st.com/internet/com/TECHNICAL_RESOURCES/TECHNICAL_LITERATURE/DATASHEET/DM00037051.pdf
+*       Dev.Board:       EasyMx PRO v7 for STM32
+*                        http://www.mikroe.com/eng/products/view/852/easymx-pro-v7-for-stm32/
+*       Ext. Modules:    microSD click board ac:microSDclick
+*                        http://http://www.mikroe.com/eng/products/view/776/microsd-click/
+*       Oscillator:      HS-PLL 72.0000 MHz, internal 8.0000 MHz RC
+*       SW:              mikroPascal PRO for ARM
+*                        http://www.mikroe.com/mikropascal/arm/
+* NOTES:
+*     - Place Easy TFT into the socket.
+*     - Place microSD click board into the mikroBUS socket 1.
+*     - Plug USB cable in USB UART A connector.
+*     - Turn on switches for UART communication RX-PA9 and TX-PA10.
+*     - On TFT are displayed only messages. Context of created files are sent to UART1 module.
+*     - Make sure that MMC card is properly formatted (to FAT16 or just FAT)
+*       before testing it on this example.
+*     - This example expects MMC card to be inserted before reset, otherwise,
+*       the FAT_ERROR message is displayed.
+**************************************************************************************************}
+program MMC;
+uses resources;
+
+// TFT module connections
+var TFT_DataPort : word at GPIOE_ODR;
+    TFT_RST      : sbit at GPIOE_ODR.B8;
+    TFT_BLED     : sbit at GPIOE_ODR.B9;
+    TFT_RS       : sbit at GPIOE_ODR.B12;
+    TFT_CS       : sbit at GPIOE_ODR.B15;
+    TFT_RD       : sbit at GPIOE_ODR.B10;
+    TFT_WR       : sbit at GPIOE_ODR.B11;
+// End TFT module connections
+
+// MMC Chip Select connection
+//**************************************************************************************************
+var Mmc_Chip_Select           : sbit at GPIOD_ODR.B13;
+//**************************************************************************************************
+
+procedure InitMCU();
+begin
+  // TFT config
+  GPIO_Config(@GPIOE_BASE, _GPIO_PINMASK_9, _GPIO_CFG_DIGITAL_OUTPUT);
+  TFT_Set_Default_Mode();
+
+  UART1_Init(115200);
+  TFT_Init(320, 240);
+  Delay_ms(1000);
+  TFT_BLED := 1;
+end;
+
+{**************************************************************************************************}
+procedure DrawMMCScr();
+begin
+  TFT_Fill_Screen(CL_WHITE);
+  TFT_Set_Pen(CL_Black, 1);
+  TFT_Line(20, 220, 300, 220);
+  TFT_LIne(20,  46, 300,  46);
+  TFT_Set_Font(@HandelGothic_BT21x22_Regular, CL_RED, FO_HORIZONTAL);
+  TFT_Write_Text('microSD click TEST', 75, 14);
+  TFT_Set_Font(@Verdana12x13_Regular, CL_BLACK, FO_HORIZONTAL);
+  TFT_Write_Text('EasyMX PRO v7', 19, 223);
+  TFT_Set_Font(@Verdana12x13_Regular, CL_RED, FO_HORIZONTAL);
+  TFT_Write_Text('www.mikroe.com', 200, 223);
+  TFT_Set_Font(@TFT_defaultFont, CL_BLACK, FO_HORIZONTAL);
+end;
+{**************************************************************************************************}
+
+const LINE_LEN = 43;
+
+var 
+  filename : string[14]; // File names
+  err_txt  : string[20];
+  file_contents : string[LINE_LEN];
+
+  character   : byte;
+  loop, loop2 : byte;
+  i, size     : longint;
+
+  buffer : array[512] of byte;
+
+// UART1 write text and new line (carriage return + line feed)
+procedure UART_Write_Line( var uart_text : string );
+  begin
+    UART1_Write_Text(uart_text);
+    UART1_Write(13);
+    UART1_Write(10);
+  end;
+
+// Creates new file and writes some data to it
+procedure M_Create_New_File();
+begin
+  filename[7] := 'A';
+  Mmc_Fat_Set_File_Date(2010, 4, 19, 9, 0, 0); // Set file date & time info
+  Mmc_Fat_Assign(filename, 0xA0);              // Find existing file or create a new one
+  Mmc_Fat_Rewrite();                           // To clear file and start with new data
+
+  for loop:=1 to 99 do
+    begin
+      UART1_Write('.');
+      TFT_Write_Text('Creating New File...', 100 , 155);
+      Delay_ms(10);
+      TFT_Set_Font(@TFT_defaultFont, CL_WHITE, FO_HORIZONTAL);
+      TFT_Write_Text('Creating New File...', 100 , 155);
+      Delay_ms(10);
+      TFT_Set_Font(@TFT_defaultFont, CL_BLACK, FO_HORIZONTAL);
+      TFT_Write_Text('Creating New File...', 100 , 155);
+
+      file_contents[0] := loop div 10 + 48;
+      file_contents[1] := loop mod 10 + 48;
+      Mmc_Fat_Write(file_contents, LINE_LEN-1);   // write data to the assigned file
+    end;
+  TFT_Set_Font(@TFT_defaultFont, CL_WHITE, FO_HORIZONTAL);
+  TFT_Write_Text('Creating New File...', 100 , 155);
+  TFT_Set_Font(@TFT_defaultFont, CL_BLACK, FO_HORIZONTAL);
+end;
+
+// Creates many new files and writes data to them
+procedure M_Create_Multiple_Files();
+begin
+  for loop2 := 'B' to 'Z' do
+    begin
+      UART1_Write(loop2);                          // signal the progress
+      filename[7] := loop2;                        // set filename
+      Mmc_Fat_Set_File_Date(2010, 4, 19, 9, 0, 0); // Set file date & time info
+      Mmc_Fat_Assign(filename, 0xA0);              // find existing file or create a new one
+      Mmc_Fat_Rewrite();                           // To clear file and start with new data
+      for loop := 1 to 44 do
+        begin
+          file_contents[0] := loop div 10 + 48;
+          file_contents[1] := loop mod 10 + 48;
+          TFT_Write_Text('Creating Multiple Files...', 100 , 155);
+          Delay_ms(10);
+          TFT_Set_Font(@TFT_defaultFont, CL_WHITE, FO_HORIZONTAL);
+          TFT_Write_Text('Creating Multiple Files...', 100 , 155);
+          Delay_ms(10);
+          TFT_Set_Font(@TFT_defaultFont, CL_BLACK, FO_HORIZONTAL);
+          TFT_Write_Text('Creating Multiple Files...', 100 , 155);
+          Mmc_Fat_Write(file_contents, LINE_LEN-1);  // write data to the assigned file
+        end;
+
+        TFT_Set_Font(@TFT_defaultFont, CL_WHITE, FO_HORIZONTAL);
+        TFT_Write_Text('Creating Multiple Files...', 100 , 155);
+    end
+end;
+
+// Opens an existing file and rewrites it
+procedure M_Open_File_Rewrite();
+begin
+  filename[7] := 'C';
+  Mmc_Fat_Assign(filename, 0);
+  Mmc_Fat_Rewrite();
+
+  for loop := 1 to 55 do
+    begin
+      file_contents[0] := loop div 10 + 48;
+      file_contents[1] := loop mod 10 + 48;
+      Mmc_Fat_Write(file_contents, LINE_LEN-1);      // write data to the assigned file
+      TFT_Write_Text('Open File Rewrite...', 100 , 155);
+      Delay_ms(10);
+      TFT_Set_Font(@TFT_defaultFont, CL_BLACK, FO_HORIZONTAL);
+      TFT_Write_Text('Open File Rewrite...', 100 , 155);
+      Delay_ms(10);
+      TFT_Set_Font(@TFT_defaultFont, CL_WHITE, FO_HORIZONTAL);
+      TFT_Write_Text('Open File Rewrite...', 100 , 155);
+    end;
+  TFT_Set_Font(@TFT_defaultFont, CL_WHITE, FO_HORIZONTAL);
+  TFT_Write_Text('Open File Rewrite...', 100 , 155);
+  TFT_Set_Font(@TFT_defaultFont, CL_BLACK, FO_HORIZONTAL);
+end;
+
+// Opens an existing file and appends data to it
+//               (and alters the date/time stamp)
+procedure M_Open_File_Append();
+  begin
+    filename[7] := 'B';
+    Mmc_Fat_Assign(filename, 0);
+    Mmc_Fat_Set_File_Date(2010, 4, 19, 9, 20, 0);
+    Mmc_Fat_Append();                                    // Prepare file for append
+    Mmc_Fat_Write(' for mikroElektronika 2011\n', 27);   // Write data to assigned file
+    TFT_Set_Font(@TFT_defaultFont, CL_BLACK, FO_HORIZONTAL);
+    TFT_Write_Text('Open File Append...', 100 , 155);
+    Delay_ms(10);
+    TFT_Set_Font(@TFT_defaultFont, CL_WHITE, FO_HORIZONTAL);
+    TFT_Write_Text('Open File Append...', 100 , 155);
+    TFT_Set_Font(@TFT_defaultFont, CL_BLACK, FO_HORIZONTAL);
+  end;
+
+// Opens an existing file, reads data from it and puts it to UART
+procedure M_Open_File_Read();
+var character : byte;
+begin
+
+  filename[7] := 'B';
+  Mmc_Fat_Assign(filename, 0);
+  Mmc_Fat_Reset(size);            // To read file, procedure returns size of file
+  for i := 1 to size-1 do
+  begin
+    Mmc_Fat_Read(character);
+    UART1_Write(character);       // Write data to UART
+  end
+end;
+
+// Deletes a file. If file doesn't exist, it will first be created
+// and then deleted.
+procedure M_Delete_File();
+begin
+  filename[7] := 'F';
+  Mmc_Fat_Assign(filename, 0);
+  Mmc_Fat_Delete();
+end;
+
+// Tests whether file exists, and if so sends its creation date
+// and file size via UART
+procedure M_Test_File_Exist();
+var
+  fsize : longint;
+  year : integer;
+  month, day, hour, minute : byte;
+  outstr : string[12];
+begin
+
+  filename[7] := 'B';
+//  filename[7] = 'F';
+  if (Mmc_Fat_Assign(filename, 0)) then
+  begin
+    //--- file has been found - get its create date
+    Mmc_Fat_Get_File_Date(year, month, day, hour, minute);
+    UART1_Write_Text(' created: ');
+    WordToStr(year, outstr);
+    UART1_Write_Text(outstr);
+    ByteToStr(month, outstr);
+    UART1_Write_Text(outstr);
+    WordToStr(day, outstr);
+    UART1_Write_Text(outstr);
+    WordToStr(hour, outstr);
+    UART1_Write_Text(outstr);
+    WordToStr(minute, outstr);
+    UART1_Write_Text(outstr);
+
+    //--- file has been found - get its modified date
+    Mmc_Fat_Get_File_Date_Modified(year, month, day, hour, minute);
+    UART1_Write_Text(' modified: ');
+    WordToStr(year, outstr);
+    UART1_Write_Text(outstr);
+    ByteToStr(month, outstr);
+    UART1_Write_Text(outstr);
+    WordToStr(day, outstr);
+    UART1_Write_Text(outstr);
+    WordToStr(hour, outstr);
+    UART1_Write_Text(outstr);
+    WordToStr(minute, outstr);
+    UART1_Write_Text(outstr);
+
+    //--- get file size
+    fsize := Mmc_Fat_Get_File_Size;
+    LongIntToStr(fsize, outstr);
+    UART_Write_Line(outstr);
+  end
+  else
+  begin
+    //--- file was not found - signal it
+    UART1_Write(0x55);
+    Delay_ms(1000);
+    UART1_Write(0x55);
+  end
+end;
+
+// Tries to create a swap file, whose size will be at least 100
+// sectors (see Help for details)
+procedure M_Create_Swap_File();
+var i : word;
+begin
+
+  for i:=0 to 511 do
+    Buffer[i] := i;
+
+  size := Mmc_Fat_Get_Swap_File(5000, 'mikroE.txt', 0x20);   // see help on this function for details
+
+  if (size <> 0) then
+  begin
+    LongIntToStr(size, err_txt);
+    UART_Write_Line(err_txt);
+
+    for i:=0 to 4999 do
+    begin
+      Mmc_Write_Sector(size, Buffer);
+      inc(size);
+      UART1_Write('.');
+    end
+  end
+end;
+
+// Main. Uncomment the function(s) to test the desired operation(s)
+begin
+  {$DEFINE COMPLETE_EXAMPLE}
+  InitMCU();
+  DrawMMCScr();
+  Delay_ms(10);
+
+  err_txt := 'FAT16 not found';
+  file_contents := 'XX MMC/SD FAT16 library by Anton Rieckert#';
+  file_contents[41] := 10;          // newline
+  filename := 'MIKRO00x.TXT';
+
+  TFT_Write_Text('1. STM32-Started',90, 65);
+  TFT_Write_Text('2. Check for MMC...', 90, 85);
+
+  // Initialize SPI3 module
+  SPI3_Init_Advanced(_SPI_FPCLK_DIV64, _SPI_MASTER  or _SPI_8_BIT or
+                     _SPI_CLK_IDLE_LOW or _SPI_FIRST_CLK_EDGE_TRANSITION or
+                     _SPI_MSB_FIRST or _SPI_SS_DISABLE or _SPI_SSM_ENABLE or _SPI_SSI_1,
+                     @_GPIO_MODULE_SPI3_PC10_11_12);
+
+  // use fat16 quick format instead of init routine if a formatting is needed
+  if (Mmc_Fat_Init() = 0) then
+    begin
+      TFT_Write_Text('3. MMC is ready to use!', 90, 105);
+      // reinitialize spi at higher speed
+      SPI3_Init_Advanced(_SPI_FPCLK_DIV2, _SPI_MASTER  or _SPI_8_BIT or
+                         _SPI_CLK_IDLE_LOW or _SPI_FIRST_CLK_EDGE_TRANSITION or
+                         _SPI_MSB_FIRST or _SPI_SS_DISABLE or _SPI_SSM_ENABLE or _SPI_SSI_1,
+                         @_GPIO_MODULE_SPI3_PC10_11_12);
+      //--- Test start
+      TFT_Write_Text('4. Test Start', 90, 125);
+      UART_Write_Line('Test Start.');
+      TFT_Write_Text('Watch detailed test on UART!', 90, 205);
+      //--- Test routines. Uncomment them one-by-one to test certain features
+      M_Create_New_File();
+      {$IFDEF COMPLETE_EXAMPLE}
+        M_Create_Multiple_Files();
+        M_Open_File_Rewrite();
+        M_Open_File_Append();
+        M_Open_File_Read();
+        M_Delete_File();
+        M_Test_File_Exist();
+        M_Create_Swap_File();
+      {$ENDIF}
+      UART_Write_Line('Test End.');
+      TFT_Set_Font(@TFT_defaultFont, CL_BLACK, FO_HORIZONTAL);
+      TFT_Write_Text('5. Done!', 90, 165);
+    end
+  else
+    begin
+      TFT_Write_Text('3. FAT16 not found!', 90, 105);
+      UART_Write_Line(err_txt); // Note: Mmc_Fat_Init tries to initialize a card more than once.
+                                //       If card is not present, initialization may last longer (depending on clock speed)
+    end;
+end.

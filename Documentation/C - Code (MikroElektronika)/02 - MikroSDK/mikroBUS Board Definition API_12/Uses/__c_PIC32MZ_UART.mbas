@@ -1,0 +1,33 @@
+module __c_PIC3MZ_UART
+include __t_PIC32
+
+#IFDEF ENABLE_UART THEN
+
+sub function _uartInit_1 (dim cfg as ^const uint32_t) as T_mikrobus_ret  
+
+#ENDIF
+
+implements
+
+const _MIKROBUS_ERR_UART          as byte = 5
+
+' ------------------------------------------------------------ SYSTEM SPECIFIC '
+
+#IFDEF ENABLE_UART THEN
+
+sub function _uartInit_1 (dim cfg as ^const uint32_t) as T_mikrobus_ret   
+dim arg1 as ^const uint32_t
+    arg1 = (cfg + 0)
+
+	Unlock_IOLOCK()
+    PPS_Mapping(_RPB2, _OUTPUT, _U2TX)
+    PPS_Mapping(_RPB0, _INPUT, _U2RX)
+    Lock_IOLOCK()
+
+    UART2_Init(longword(arg1^))
+    Result = 0
+end sub
+
+#ENDIF
+
+end.

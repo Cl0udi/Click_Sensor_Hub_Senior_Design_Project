@@ -1,0 +1,13 @@
+<mikroSD_Click>
+	<Attributes>
+		<Url>http://www.mikroe.com/click/microsd/</Url>
+		<Image>microSD click.jpg</Image>
+		<File></File>
+	</Attributes>
+	<Events>
+		<OnLeftClick></OnLeftClick>
+		<OnRightClick></OnRightClick>
+		<OnDblClick>OpenUrl</OnDblClick>
+		<OnMouseOver>PreviewImage</OnMouseOver>
+	</Events>
+</mikroSD_Click>

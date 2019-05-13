@@ -1,0 +1,19 @@
+<LIB_INFO>
+	<FILE_VERSION>1</FILE_VERSION>
+	<ALIAS>
+		<Air_quality_CEC_M4/>
+	</ALIAS>
+	<NAME>
+		<Air_quality_CEC_M4/>
+	</NAME>
+	<FILES>
+		<Air_quality_CEC_M4.emcl/>
+	</FILES>
+	<DEVICES>
+		<CEC1302/>
+		<CEC1702/>
+	</DEVICES>
+	<DEPENDENCY>
+		<ADC/>
+	</DEPENDENCY>
+</LIB_INFO>

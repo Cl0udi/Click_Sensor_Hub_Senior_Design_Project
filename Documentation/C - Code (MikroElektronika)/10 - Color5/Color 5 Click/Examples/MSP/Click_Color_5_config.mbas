@@ -1,0 +1,8 @@
+module Click_Color_5_config
+
+include Click_Color_5_types
+
+const
+    _COLOR5_I2C_CFG as uint32_t[1] = (400000)
+    
+end.

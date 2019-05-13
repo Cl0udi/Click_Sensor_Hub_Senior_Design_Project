@@ -1,0 +1,19 @@
+<LIB_INFO>
+	<FILE_VERSION>1</FILE_VERSION>
+	<ALIAS>
+		<Color_5_MSP_M4/>
+	</ALIAS>
+	<NAME>
+		<Color_5_MSP_M4/>
+	</NAME>
+	<FILES>
+		<Color_5_MSP_M4.emcl/>
+	</FILES>
+	<DEVICES>
+		<MSP432P401M/>
+		<MSP432P401R/>
+	</DEVICES>
+	<DEPENDENCY>
+		<I2C/>
+	</DEPENDENCY>
+</LIB_INFO>

@@ -1,0 +1,5 @@
+module Click_Alcohol_config
+
+include Click_Alcohol_types
+
+end.

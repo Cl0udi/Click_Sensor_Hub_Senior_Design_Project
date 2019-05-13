@@ -1,0 +1,6 @@
+[PROJECTS]
+Count=2
+Project0=microSD click Common\microSD_Click_Common.mbppi
+Project1=microSD click Common\microSD_Click_FAT16.mbppi
+[ActiveProject]
+Index=0

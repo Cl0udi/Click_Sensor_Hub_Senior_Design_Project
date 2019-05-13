@@ -1,0 +1,20 @@
+<LIB_INFO>
+	<FILE_VERSION>1</FILE_VERSION>
+	<ALIAS>
+		<Gaussmeter_CEC_M4/>
+	</ALIAS>
+	<NAME>
+		<Gaussmeter_CEC_M4/>
+	</NAME>
+	<FILES>
+		<Gaussmeter_CEC_M4.emcl/>
+	</FILES>
+	<DEVICES>
+		<CEC1302/>
+		<CEC1702/>
+	</DEVICES>
+	<DEPENDENCY>
+		<I2C/>
+		<SPI/>
+	</DEPENDENCY>
+</LIB_INFO>

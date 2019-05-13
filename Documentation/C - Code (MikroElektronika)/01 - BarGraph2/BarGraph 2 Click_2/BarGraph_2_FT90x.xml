@@ -1,0 +1,25 @@
+<LIB_INFO>
+	<FILE_VERSION>1</FILE_VERSION>
+	<ALIAS>
+		<BarGraph_2_FT90x/>
+	</ALIAS>
+	<NAME>
+		<BarGraph_2_FT90x/>
+	</NAME>
+	<FILES>
+		<BarGraph_2_FT90x.emcl/>
+	</FILES>
+	<DEVICES>
+		<FT900/>
+		<FT901/>
+		<FT902/>
+		<FT903/>
+		<FT905/>
+		<FT906/>
+		<FT907/>
+		<FT908/>
+	</DEVICES>
+	<DEPENDENCY>
+		<SPI/>
+	</DEPENDENCY>
+</LIB_INFO>
